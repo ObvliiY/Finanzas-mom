@@ -49,10 +49,14 @@
         .amt.minus { color:var(--expense); }
         .delete-btn { background:none; border:none; color:#ccc; font-size:18px; cursor:pointer; padding:4px 4px 4px 8px; flex-shrink:0; line-height:1; }
         .delete-btn:active { color:var(--expense); }
-        .chat-area { padding-bottom:80px; min-height:200px; }
+        .chat-area { padding-bottom:130px; min-height:200px; }
         .bubble-bot { background:white; border-radius:16px 16px 16px 4px; padding:12px 16px; font-size:14px; max-width:88%; margin-bottom:10px; box-shadow:0 1px 3px rgba(0,0,0,.07); line-height:1.5; }
         .bubble-user { background:var(--primary); color:white; border-radius:16px 16px 4px 16px; padding:12px 16px; font-size:14px; max-width:80%; margin-bottom:10px; margin-left:auto; line-height:1.5; }
-        .chat-input-container { position:fixed; bottom:70px; left:0; right:0; padding:10px 16px; background:var(--bg); border-top:1px solid #ddd; }
+        .chat-input-container { position:fixed; bottom:65px; left:0; right:0; padding:8px 16px 10px; background:var(--bg); border-top:1px solid #ddd; }
+        .quick-btns { display:flex; gap:6px; overflow-x:auto; padding-bottom:8px; scrollbar-width:none; }
+        .quick-btns::-webkit-scrollbar { display:none; }
+        .quick-btn { background:white; border:1px solid #ddd; border-radius:16px; padding:6px 12px; font-size:12px; white-space:nowrap; cursor:pointer; color:var(--text); flex-shrink:0; }
+        .quick-btn:active { background:var(--primary); color:white; border-color:var(--primary); }
         .chat-input-inner { display:flex; gap:10px; max-width:468px; margin:0 auto; }
         input[type="text"], input[type="password"] { flex:1; padding:14px 18px; border-radius:25px; border:1px solid #ddd; font-size:16px; outline:none; background:white; width:100%; }
         .btn-send { background:var(--primary); border:none; color:white; width:50px; height:50px; border-radius:50%; font-size:20px; cursor:pointer; flex-shrink:0; }
@@ -67,8 +71,7 @@
         .btn-no { background:#eee; color:#333; }
         .success-msg { background:white; border-radius:12px; padding:16px; text-align:center; color:var(--income); font-weight:500; margin-top:12px; font-size:15px; }
         .empty-msg { text-align:center; color:#aaa; padding:40px 0; font-size:14px; }
-
-        /* CONFIG SCREEN */
+        /* CONFIG */
         #screen-config { position:fixed; inset:0; background:var(--bg); z-index:200; overflow-y:auto; display:none; padding:24px 20px 40px; }
         #screen-config.visible { display:block; }
         #screen-config h1 { color:var(--primary); font-size:22px; margin:0 0 6px; }
@@ -85,7 +88,6 @@
 </head>
 <body>
 
-<!-- PANTALLA DE CONFIGURACIÓN -->
 <div id="screen-config">
     <h1>⚙️ Configuración</h1>
     <p class="subtitle">Solo necesitas hacer esto una vez. Pide las claves por WhatsApp y pégalas aquí.</p>
@@ -93,11 +95,6 @@
         <label>Clave de Groq (IA)</label>
         <input type="password" id="cfg-groq" placeholder="gsk_...">
         <div class="hint">Gratis en console.groq.com → API Keys</div>
-    </div>
-    <div class="cfg-field">
-        <label>URL del Apps Script</label>
-        <input type="text" id="cfg-script" placeholder="https://script.google.com/macros/s/...">
-        <div class="hint">La URL que termina en /exec</div>
     </div>
     <div class="cfg-field">
         <label>ID del Google Sheet</label>
@@ -115,7 +112,7 @@
 
 <header>
     <h2 id="header-title">Resumen</h2>
-    <button class="header-cfg-btn" onclick="openConfig()" title="Configuración">⚙️</button>
+    <button class="header-cfg-btn" onclick="openConfig()">⚙️</button>
 </header>
 
 <div class="container">
@@ -125,17 +122,17 @@
             <button class="chip" onclick="setResumenFilter('week',this)">Esta semana</button>
             <button class="chip" onclick="setResumenFilter('month',this)">Este mes</button>
             <button class="chip" onclick="setResumenFilter('Fisioterapia',this)">Fisioterapia</button>
-            <button class="chip" onclick="setResumenFilter('Estimación Temprana',this)">Estimulación</button>
+            <button class="chip" onclick="setResumenFilter('Estimulación Temprana',this)">Estimulación</button>
             <button class="chip" onclick="setResumenFilter('Subarrentas',this)">Subarrentas</button>
         </div>
         <div class="grid">
             <div class="card"><h4>Entrada</h4><p id="stat-entrada" class="green">$0</p></div>
             <div class="card"><h4>Ganancia</h4><p id="stat-ganancia" class="green">$0</p></div>
-            <div class="card"><h4>Gasto Fijo</h4><p id="stat-fijo" class="red">$0</p></div>
+            <div class="card"><h4>Gasto Mensual</h4><p id="stat-fijo" class="red">$0</p></div>
             <div class="card"><h4>Gasto Variable</h4><p id="stat-variable" class="red">$0</p></div>
         </div>
         <div class="card">
-            <h4>Renta semanal ($1,800)</h4>
+            <h4>Renta mensual ($1,800)</h4>
             <div class="prog-bg"><div id="rent-progress" class="prog-fill" style="width:0%"></div></div>
             <p style="font-size:13px;margin-top:6px;color:#666" id="rent-label">$0 de $1,800</p>
         </div>
@@ -145,9 +142,16 @@
 
     <div id="tab-registrar" class="tab-content">
         <div class="chat-area" id="chat-area">
-            <div class="bubble-bot">Hola, ¿qué movimiento quieres registrar? Escríbelo como quieras, por ejemplo: <em>"cobré 500 de fisio"</em> o <em>"gasté 300 en material"</em>.</div>
+            <div class="bubble-bot">Hola, ¿qué movimiento quieres registrar? Escríbelo como quieras o usa los botones rápidos de abajo.</div>
         </div>
         <div class="chat-input-container">
+            <div class="quick-btns">
+                <button class="quick-btn" onclick="quickFill('Pagué la renta $1,800')">🏠 Renta $1,800</button>
+                <button class="quick-btn" onclick="quickFill('cobré de fisioterapia $')">💆 Fisio</button>
+                <button class="quick-btn" onclick="quickFill('cobré de estimulación $')">👶 Estimulación</button>
+                <button class="quick-btn" onclick="quickFill('cobré de subarrenta $')">🔑 Subarrenta</button>
+                <button class="quick-btn" onclick="quickFill('gasté en ')">📦 Gasto</button>
+            </div>
             <div class="chat-input-inner">
                 <input type="text" id="chat-input" placeholder="Describe el movimiento..." onkeydown="if(event.key==='Enter')processText()">
                 <button class="btn-send" onclick="processText()">➔</button>
@@ -164,7 +168,7 @@
         <div id="historial-filter-negocio" style="display:flex;gap:8px;overflow-x:auto;padding:4px 0 10px;scrollbar-width:none;">
             <button class="chip active" onclick="setHistFilter('negocio','all',this)">Todos</button>
             <button class="chip" onclick="setHistFilter('negocio','Fisioterapia',this)">Fisioterapia</button>
-            <button class="chip" onclick="setHistFilter('negocio','Estimación Temprana',this)">Estimulación</button>
+            <button class="chip" onclick="setHistFilter('negocio','Estimulación Temprana',this)">Estimulación</button>
             <button class="chip" onclick="setHistFilter('negocio','Subarrentas',this)">Subarrentas</button>
         </div>
         <div id="history-list"><div class="empty-msg">Cargando...</div></div>
@@ -178,53 +182,48 @@
 </nav>
 
 <script>
-// ── CONFIG via localStorage ────────────────────────────────────
+// ── CONFIG ──
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyYcrsDCrROCcLkS0Qe1iPjipTak9tF4krXuvvlpG0j0nmAe9ZQuOt3EvkibHv9pBFMBw/exec";
 let CFG = {};
-
 function loadConfig() {
-    const saved = localStorage.getItem('finanzas_cfg');
-    if (saved) CFG = JSON.parse(saved);
-    return !!(CFG.groq && CFG.script && CFG.sheetId && CFG.sheetsKey);
+    const s = localStorage.getItem('finanzas_cfg');
+    if (s) CFG = JSON.parse(s);
+    CFG.script = APPS_SCRIPT_URL;
+    return !!(CFG.groq && CFG.sheetId && CFG.sheetsKey);
 }
-
 function saveConfig() {
-    const groq      = document.getElementById('cfg-groq').value.trim();
-    const script    = document.getElementById('cfg-script').value.trim();
-    const sheetId   = document.getElementById('cfg-sheetid').value.trim();
-    const sheetsKey = document.getElementById('cfg-sheetskey').value.trim();
-    const status    = document.getElementById('cfg-status');
-    if (!groq || !script || !sheetId || !sheetsKey) {
-        status.className = 'cfg-status err';
-        status.textContent = 'Faltan datos — llena todos los campos.';
-        return;
-    }
-    CFG = { groq, script, sheetId, sheetsKey };
-    localStorage.setItem('finanzas_cfg', JSON.stringify(CFG));
-    status.className = 'cfg-status ok';
-    status.textContent = '✓ Guardado correctamente';
-    setTimeout(closeConfig, 800);
+    const groq=document.getElementById('cfg-groq').value.trim(),
+          sheetId=document.getElementById('cfg-sheetid').value.trim(),
+          sheetsKey=document.getElementById('cfg-sheetskey').value.trim(),
+          status=document.getElementById('cfg-status');
+    if (!groq||!sheetId||!sheetsKey) { status.className='cfg-status err'; status.textContent='Faltan datos.'; return; }
+    CFG={groq,sheetId,sheetsKey};
+    localStorage.setItem('finanzas_cfg',JSON.stringify(CFG));
+    status.className='cfg-status ok'; status.textContent='✓ Guardado';
+    setTimeout(closeConfig,800);
 }
-
 function openConfig() {
-    document.getElementById('cfg-groq').value      = CFG.groq      || '';
-    document.getElementById('cfg-script').value    = CFG.script    || '';
-    document.getElementById('cfg-sheetid').value   = CFG.sheetId   || '';
-    document.getElementById('cfg-sheetskey').value = CFG.sheetsKey || '';
-    document.getElementById('cfg-status').textContent = '';
+    document.getElementById('cfg-groq').value=CFG.groq||'';
+
+    document.getElementById('cfg-sheetid').value=CFG.sheetId||'';
+    document.getElementById('cfg-sheetskey').value=CFG.sheetsKey||'';
+    document.getElementById('cfg-status').textContent='';
     document.getElementById('screen-config').classList.add('visible');
 }
-
 function closeConfig() {
     document.getElementById('screen-config').classList.remove('visible');
     init();
 }
 
+// ── HELPERS ──
+function parseMonto(val) {
+    if (typeof val === 'number') return val;
+    const clean = String(val).replace(/[^0-9.]/g, '');
+    return parseFloat(clean) || 0;
+}
+
 // ── STATE ──
-let transactions = [];
-let pendingTx = null;
-let resumenFilter = 'all';
-let histFilterTipo = 'all';
-let histFilterNegocio = 'all';
+let transactions=[],pendingTx=null,editingId=null,resumenFilter='all',histFilterTipo='all',histFilterNegocio='all';
 
 // ── INIT ──
 async function init() {
@@ -233,122 +232,216 @@ async function init() {
     renderResumen();
 }
 
-function switchTab(tabId, el) {
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    document.getElementById('tab-' + tabId).classList.add('active');
+function switchTab(tabId,el) {
+    document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+    document.getElementById('tab-'+tabId).classList.add('active');
     el.classList.add('active');
-    document.getElementById('header-title').innerText = {resumen:'Resumen',registrar:'Registrar',historial:'Historial'}[tabId];
-    if (tabId === 'historial') renderHistory();
-    if (tabId === 'resumen') renderResumen();
+    document.getElementById('header-title').innerText={resumen:'Resumen',registrar:'Registrar',historial:'Historial'}[tabId];
+    if (tabId==='historial') renderHistory();
+    if (tabId==='resumen') renderResumen();
 }
 
 // ── SHEETS: LOAD ──
+// Columnas: A=Fecha B=Tipo C=Monto D=Negocio E=Descripción F=ID
 async function loadData() {
     try {
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${CFG.sheetId}/values/Finanzas!A:E?key=${CFG.sheetsKey}`;
-        const res  = await fetch(url);
-        const data = await res.json();
-        if (!data.values || data.values.length <= 1) { transactions = []; return; }
-        transactions = data.values.slice(1).map((row, i) => ({
-            rowIndex:    i + 2,
-            fecha:       row[0] || '',
-            tipo:        row[1] || '',
-            monto:       parseFloat(row[2]) || 0,
-            negocio:     row[3] || 'General',
-            descripcion: row[4] || ''
+        const url=`https://sheets.googleapis.com/v4/spreadsheets/${CFG.sheetId}/values/Finanzas!A:F?key=${CFG.sheetsKey}`;
+        const res=await fetch(url);
+        const data=await res.json();
+        if (!data.values||data.values.length<=1) { transactions=[]; return; }
+        transactions=data.values.slice(1).map(row=>({
+            id:          row[5]||'',
+            fecha:       row[0]||'',
+            tipo:        row[1]||'',
+            monto:       parseMonto(row[2]),
+            negocio:     row[3]||'General',
+            descripcion: row[4]||''
         })).reverse();
-    } catch(e) { console.error('Error cargando datos', e); }
+    } catch(e) { console.error('Error cargando',e); }
 }
 
-// ── SHEETS: SAVE (via Apps Script) ──
+// ── SHEETS: SAVE ──
 async function saveToSheets(tx) {
-    const res = await fetch(CFG.script, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({
-            action: 'append', sheetId: CFG.sheetId, sheetName: 'Finanzas',
-            fecha: tx.fecha, tipo: tx.tipo, monto: tx.monto,
-            negocio: tx.negocio, descripcion: tx.descripcion
-        })
+    const res=await fetch(CFG.script,{
+        method:'POST', headers:{'Content-Type':'text/plain'},
+        body:JSON.stringify({action:'append',sheetId:CFG.sheetId,sheetName:'Finanzas',
+            fecha:tx.fecha,tipo:tx.tipo,monto:tx.monto,negocio:tx.negocio,descripcion:tx.descripcion,id:tx.id})
     });
-    const json = await res.json();
-    if (!json.ok) throw new Error('Apps Script error');
-    return json.rowIndex;
+    const json=await res.json();
+    if (!json.ok) throw new Error('Error al guardar');
 }
 
-// ── SHEETS: DELETE (via Apps Script) ──
-async function deleteFromSheets(rowIndex) {
-    const res = await fetch(CFG.script, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ action: 'delete', sheetId: CFG.sheetId, sheetName: 'Finanzas', rowIndex })
+// ── SHEETS: DELETE by ID ──
+async function deleteFromSheets(id) {
+    const res=await fetch(CFG.script,{
+        method:'POST', headers:{'Content-Type':'text/plain'},
+        body:JSON.stringify({action:'delete',sheetId:CFG.sheetId,sheetName:'Finanzas',id:id})
     });
-    const json = await res.json();
-    if (!json.ok) throw new Error('Delete error');
+    const json=await res.json();
+    if (!json.ok) throw new Error('Error al borrar');
 }
 
-async function deleteTx(rowIndex, el) {
+// ── SHEETS: UPDATE ──
+async function updateInSheets(tx) {
+    const res=await fetch(CFG.script,{
+        method:'POST', headers:{'Content-Type':'text/plain'},
+        body:JSON.stringify({action:'update',sheetId:CFG.sheetId,sheetName:'Finanzas',
+            id:tx.id,fecha:tx.fecha,tipo:tx.tipo,monto:tx.monto,negocio:tx.negocio,descripcion:tx.descripcion})
+    });
+    const json=await res.json();
+    if (!json.ok) throw new Error('Error al actualizar');
+}
+
+async function deleteTx(id, el) {
     if (!confirm('¿Borrar este movimiento?')) return;
-    const item = el.closest('.list-item');
-    item.style.opacity = '0.4';
+    const item=el.closest('.list-item');
+    item.style.opacity='0.4';
     try {
-        await deleteFromSheets(rowIndex);
+        await deleteFromSheets(id);
         await loadData();
         renderResumen();
         renderHistory();
     } catch(e) {
-        item.style.opacity = '1';
+        item.style.opacity='1';
         alert('Error al borrar. Intenta de nuevo.');
     }
 }
 
-// ── GROQ ──
-async function processText() {
-    const input = document.getElementById('chat-input');
-    const text  = input.value.trim();
-    if (!text) return;
-    appendBubble('user', text);
-    input.value = '';
-    const loadingEl = appendBubble('bot', 'Interpretando...');
+// ── EDITAR ──
+function editTx(id) {
+    const tx = transactions.find(t => t.id === id);
+    if (!tx) return;
+    editingId = id;
+    const tipos = ['entrada','gasto_fijo','gasto_variable'];
+    const tipoLabels = ['Entrada','Gasto mensual','Gasto variable'];
+    const negocios = ['Fisioterapia','Estimulaci\u00f3n Temprana','Subarrentas','General'];
+    const modal = document.createElement('div');
+    modal.id = 'edit-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;';
+    modal.innerHTML = `
+        <div style="background:white;border-radius:16px;padding:20px;width:100%;max-width:400px;">
+            <h3 style="margin:0 0 16px;color:var(--primary)">Editar movimiento</h3>
+            <div style="margin-bottom:12px;">
+                <label style="font-size:13px;color:#666;display:block;margin-bottom:4px;">Tipo</label>
+                <select id="edit-tipo" style="width:100%;padding:12px;border-radius:8px;border:1px solid #ddd;font-size:14px;">
+                    ${tipos.map((t,i)=>`<option value="${t}" ${tx.tipo===t?'selected':''}>${tipoLabels[i]}</option>`).join('')}
+                </select>
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="font-size:13px;color:#666;display:block;margin-bottom:4px;">Monto</label>
+                <input type="number" id="edit-monto" value="${tx.monto}" style="width:100%;padding:12px;border-radius:8px;border:1px solid #ddd;font-size:14px;">
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="font-size:13px;color:#666;display:block;margin-bottom:4px;">Negocio</label>
+                <select id="edit-negocio" style="width:100%;padding:12px;border-radius:8px;border:1px solid #ddd;font-size:14px;">
+                    ${negocios.map(n=>`<option value="${n}" ${tx.negocio===n?'selected':''}>${n}</option>`).join('')}
+                </select>
+            </div>
+            <div style="margin-bottom:16px;">
+                <label style="font-size:13px;color:#666;display:block;margin-bottom:4px;">Descripci\u00f3n</label>
+                <input type="text" id="edit-desc" value="${tx.descripcion}" style="width:100%;padding:12px;border-radius:8px;border:1px solid #ddd;font-size:14px;">
+            </div>
+            <div id="edit-status" style="font-size:13px;color:var(--expense);margin-bottom:10px;min-height:18px;"></div>
+            <div style="display:flex;gap:10px;">
+                <button onclick="closeEdit()" style="flex:1;padding:13px;border-radius:8px;border:none;background:#eee;font-weight:bold;cursor:pointer;font-size:14px;">Cancelar</button>
+                <button onclick="saveEdit()" style="flex:1;padding:13px;border-radius:8px;border:none;background:var(--primary);color:white;font-weight:bold;cursor:pointer;font-size:14px;">Guardar</button>
+            </div>
+        </div>`;
+    document.body.appendChild(modal);
+}
 
-    const prompt = `Eres un asistente contable. El usuario describe una transacción en español informal mexicano.
-Responde ÚNICAMENTE con JSON puro, sin markdown, sin backticks, sin explicación.
-Formato exacto: {"tipo":"entrada","monto":500,"negocio":"Fisioterapia","descripcion":"resumen corto en español"}
-Valores permitidos — tipo: entrada|gasto_fijo|gasto_variable. negocio: Fisioterapia|Estimación Temprana|Subarrentas|General.
-Texto del usuario: "${text}"`;
+function closeEdit() {
+    const m = document.getElementById('edit-modal');
+    if (m) m.remove();
+    editingId = null;
+}
 
+async function saveEdit() {
+    const tx = transactions.find(t => t.id === editingId);
+    if (!tx) return;
+    const monto = parseFloat(document.getElementById('edit-monto').value);
+    if (!monto || monto <= 0) {
+        document.getElementById('edit-status').textContent = 'El monto debe ser mayor a 0';
+        return;
+    }
+    const updated = {
+        ...tx,
+        tipo:        document.getElementById('edit-tipo').value,
+        monto:       monto,
+        negocio:     document.getElementById('edit-negocio').value,
+        descripcion: document.getElementById('edit-desc').value.trim() || tx.descripcion
+    };
+    const btn = document.querySelector('#edit-modal button:last-child');
+    btn.disabled = true; btn.textContent = 'Guardando...';
     try {
-        const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-            method: 'POST',
-            headers: { "Authorization": `Bearer ${CFG.groq}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ model:"llama-3.3-70b-versatile", messages:[{role:"user",content:prompt}], temperature:0 })
-        });
-        const data = await resp.json();
-        let raw = data.choices[0].message.content.trim().replace(/```json|```/g,'').trim();
-        pendingTx = JSON.parse(raw);
-        pendingTx.fecha = new Date().toLocaleDateString('es-MX');
-        loadingEl.remove();
-        showConfirmation(pendingTx);
+        await updateInSheets(updated);
+        await loadData();
+        renderResumen();
+        renderHistory();
+        closeEdit();
     } catch(e) {
-        loadingEl.innerHTML = '❌ No entendí, ¿puedes describir el movimiento diferente?';
-        loadingEl.style.color = 'var(--expense)';
+        btn.disabled = false; btn.textContent = 'Guardar';
+        document.getElementById('edit-status').textContent = 'Error al guardar. Intenta de nuevo.';
     }
 }
 
-function appendBubble(type, text) {
-    const area = document.getElementById('chat-area');
-    const div  = document.createElement('div');
-    div.className = type === 'user' ? 'bubble-user' : 'bubble-bot';
-    div.innerHTML = text;
+// ── GROQ ──
+function quickFill(text) {
+    const input=document.getElementById('chat-input');
+    input.value=text;
+    input.focus();
+}
+
+async function processText() {
+    const input=document.getElementById('chat-input');
+    const text=input.value.trim();
+    if (!text) return;
+    appendBubble('user',text);
+    input.value='';
+    const loadingEl=appendBubble('bot','Interpretando...');
+
+    const prompt=`Eres un asistente contable. El usuario describe una transacción en español informal mexicano.
+Responde ÚNICAMENTE con JSON puro, sin markdown, sin backticks, sin explicación.
+Formato exacto: {"tipo":"entrada","monto":500,"negocio":"Fisioterapia","descripcion":"resumen corto en español"}
+Valores permitidos:
+- tipo: entrada | gasto_fijo | gasto_variable
+- negocio: Fisioterapia | Estimulación Temprana | Subarrentas | General
+Nota: "Estimulación" es estimulación temprana para bebés. "Fisio" o "fisioterapia" es Fisioterapia.
+Texto del usuario: "${text}"`;
+
+    try {
+        const resp=await fetch("https://api.groq.com/openai/v1/chat/completions",{
+            method:'POST',
+            headers:{"Authorization":`Bearer ${CFG.groq}`,"Content-Type":"application/json"},
+            body:JSON.stringify({model:"llama-3.3-70b-versatile",messages:[{role:"user",content:prompt}],temperature:0})
+        });
+        const data=await resp.json();
+        let raw=data.choices[0].message.content.trim().replace(/```json|```/g,'').trim();
+        pendingTx=JSON.parse(raw);
+        pendingTx.fecha=new Date().toLocaleDateString('es-MX');
+        pendingTx.id='tx_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+        loadingEl.remove();
+        showConfirmation(pendingTx);
+    } catch(e) {
+        loadingEl.innerHTML='❌ No entendí, ¿puedes describirlo diferente?';
+        loadingEl.style.color='var(--expense)';
+    }
+}
+
+function appendBubble(type,text) {
+    const area=document.getElementById('chat-area');
+    const div=document.createElement('div');
+    div.className=type==='user'?'bubble-user':'bubble-bot';
+    div.innerHTML=text;
     area.appendChild(div);
-    div.scrollIntoView({ behavior:'smooth' });
+    div.scrollIntoView({behavior:'smooth'});
     return div;
 }
 
 function showConfirmation(tx) {
-    const labels = { entrada:'Entrada', gasto_fijo:'Gasto fijo', gasto_variable:'Gasto variable' };
-    appendBubble('bot', `
+    const labels={entrada:'Entrada 💚',gasto_fijo:'Gasto mensual 🔴',gasto_variable:'Gasto variable 🟡'};
+    appendBubble('bot',`
         <div class="confirm-card">
             <h3>¿Confirmas este registro?</h3>
             <div class="confirm-row"><span>Tipo</span><span>${labels[tx.tipo]||tx.tipo}</span></div>
@@ -363,50 +456,47 @@ function showConfirmation(tx) {
 }
 
 async function confirmTx(btn) {
-    btn.disabled = true; btn.textContent = 'Guardando...';
+    btn.disabled=true; btn.textContent='Guardando...';
     try {
-        const rowIndex = await saveToSheets(pendingTx);
-        transactions.unshift(Object.assign({ rowIndex }, pendingTx));
-        btn.closest('.bubble-bot').innerHTML = '<div class="success-msg">✅ ¡Guardado con éxito!</div>';
-        pendingTx = null;
+        await saveToSheets(pendingTx);
+        transactions.unshift(Object.assign({},pendingTx));
+        btn.closest('.bubble-bot').innerHTML='<div class="success-msg">✅ ¡Guardado con éxito!</div>';
+        pendingTx=null;
         renderResumen();
     } catch(e) {
-        btn.disabled = false; btn.textContent = 'Confirmar ✓';
-        appendBubble('bot', `❌ Error al guardar: ${e.message}`);
+        btn.disabled=false; btn.textContent='Confirmar ✓';
+        appendBubble('bot',`❌ Error al guardar: ${e.message}`);
     }
 }
 
 function cancelTx(btn) {
     btn.closest('.bubble-bot').remove();
-    pendingTx = null;
-    appendBubble('bot', 'Entendido, descríbelo de nuevo.');
+    pendingTx=null;
+    appendBubble('bot','Entendido, descríbelo de nuevo.');
 }
 
 // ── FILTERS ──
-function setResumenFilter(f, el) {
-    resumenFilter = f;
-    document.querySelectorAll('#resumen-chips .chip').forEach(c => c.classList.remove('active'));
-    el.classList.add('active');
-    renderResumen();
+function setResumenFilter(f,el) {
+    resumenFilter=f;
+    document.querySelectorAll('#resumen-chips .chip').forEach(c=>c.classList.remove('active'));
+    el.classList.add('active'); renderResumen();
 }
-
-function setHistFilter(dim, val, el) {
+function setHistFilter(dim,val,el) {
     if (dim==='tipo') histFilterTipo=val; else histFilterNegocio=val;
-    el.parentNode.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-    el.classList.add('active');
-    renderHistory();
+    el.parentNode.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+    el.classList.add('active'); renderHistory();
 }
 
 // ── RENDER ──
 function getFiltered() {
-    const now = new Date();
-    return transactions.filter(t => {
-        if (resumenFilter==='week' || resumenFilter==='month') {
-            const p = t.fecha.split('/');
-            if (p.length < 3) return true;
-            const d = new Date(p[2], p[1]-1, p[0]);
-            if (resumenFilter==='week')  return (now-d)/864e5 <= 7;
-            if (resumenFilter==='month') return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear();
+    const now=new Date();
+    return transactions.filter(t=>{
+        if (resumenFilter==='week'||resumenFilter==='month') {
+            const p=t.fecha.split('/');
+            if (p.length<3) return true;
+            const d=new Date(p[2],p[1]-1,p[0]);
+            if (resumenFilter==='week')  return (now-d)/864e5<=7;
+            if (resumenFilter==='month') return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();
         }
         if (resumenFilter!=='all') return t.negocio===resumenFilter;
         return true;
@@ -414,73 +504,70 @@ function getFiltered() {
 }
 
 function renderResumen() {
-    const filtered = getFiltered();
-    let ent=0, gf=0, gv=0;
-    filtered.forEach(t => {
+    const filtered=getFiltered();
+    let ent=0,gf=0,gv=0;
+    filtered.forEach(t=>{
         if (t.tipo==='entrada') ent+=t.monto;
         else if (t.tipo==='gasto_fijo') gf+=t.monto;
         else if (t.tipo==='gasto_variable') gv+=t.monto;
     });
-    const gan = ent-gf-gv;
-    document.getElementById('stat-entrada').innerText  = `$${ent.toLocaleString()}`;
-    document.getElementById('stat-fijo').innerText     = `$${gf.toLocaleString()}`;
-    document.getElementById('stat-variable').innerText = `$${gv.toLocaleString()}`;
-    const gEl = document.getElementById('stat-ganancia');
-    gEl.innerText = `$${gan.toLocaleString()}`;
-    gEl.className = gan>=0 ? 'green' : 'red';
-    const pct = Math.min((gf/1800)*100, 100);
-    const bar = document.getElementById('rent-progress');
-    bar.style.width = pct+'%';
-    bar.className   = 'prog-fill'+(gf>=1800?' over':'');
-    document.getElementById('rent-label').innerText = `$${gf.toLocaleString()} de $1,800`;
-    const list = document.getElementById('recent-list');
-    list.innerHTML = filtered.slice(0,3).map(t=>renderItem(t,false)).join('') || '<div class="empty-msg">Sin movimientos aún</div>';
+    const gan=ent-gf-gv;
+    document.getElementById('stat-entrada').innerText=`$${ent.toLocaleString()}`;
+    document.getElementById('stat-fijo').innerText=`$${gf.toLocaleString()}`;
+    document.getElementById('stat-variable').innerText=`$${gv.toLocaleString()}`;
+    const gEl=document.getElementById('stat-ganancia');
+    gEl.innerText=`$${gan.toLocaleString()}`; gEl.className=gan>=0?'green':'red';
+    const pct=Math.min((gf/1800)*100,100);
+    const bar=document.getElementById('rent-progress');
+    bar.style.width=pct+'%'; bar.className='prog-fill'+(gf>=1800?' over':'');
+    document.getElementById('rent-label').innerText=`$${gf.toLocaleString()} de $1,800`;
+    const list=document.getElementById('recent-list');
+    list.innerHTML=filtered.slice(0,3).map(t=>renderItem(t,false)).join('')||'<div class="empty-msg">Sin movimientos aún</div>';
 }
 
 function renderHistory() {
-    const filtered = transactions.filter(t => {
-        const tipoOk    = histFilterTipo==='all' || (histFilterTipo==='entrada' ? t.tipo==='entrada' : t.tipo!=='entrada');
-        const negocioOk = histFilterNegocio==='all' || t.negocio===histFilterNegocio;
-        return tipoOk && negocioOk;
+    const filtered=transactions.filter(t=>{
+        const tipoOk=histFilterTipo==='all'||(histFilterTipo==='entrada'?t.tipo==='entrada':t.tipo!=='entrada');
+        return tipoOk&&(histFilterNegocio==='all'||t.negocio===histFilterNegocio);
     });
-    const list = document.getElementById('history-list');
+    const list=document.getElementById('history-list');
     if (!filtered.length) { list.innerHTML='<div class="empty-msg">Sin movimientos</div>'; return; }
-    const groups = {};
-    filtered.forEach(t => { if (!groups[t.fecha]) groups[t.fecha]=[]; groups[t.fecha].push(t); });
-    list.innerHTML = Object.entries(groups)
-        .map(([f,txs]) => `<div class="date-group">${f}</div>`+txs.map(t=>renderItem(t,true)).join(''))
+    const groups={};
+    filtered.forEach(t=>{ if (!groups[t.fecha]) groups[t.fecha]=[]; groups[t.fecha].push(t); });
+    list.innerHTML=Object.entries(groups)
+        .map(([f,txs])=>`<div class="date-group">${f}</div>`+txs.map(t=>renderItem(t,true)).join(''))
         .join('');
 }
 
 function badgeClass(n) {
     if (n==='Fisioterapia') return 'fisio';
-    if (n==='Estimación Temprana') return 'estim';
+    if (n==='Estimulación Temprana') return 'estim';
     if (n==='Subarrentas') return 'sub';
     return 'gen';
 }
 
-function renderItem(t, showDelete) {
-    const isIncome = t.tipo==='entrada';
-    const del = showDelete && t.rowIndex
-        ? `<button class="delete-btn" onclick="deleteTx(${t.rowIndex},this)" title="Borrar">✕</button>` : '';
+function renderItem(t,showDelete) {
+    const isIncome=t.tipo==='entrada';
+    const btns=showDelete&&t.id?`
+        <button class="delete-btn" onclick="editTx('${t.id}')" title="Editar" style="color:#aaa;font-size:16px;">✏️</button>
+        <button class="delete-btn" onclick="deleteTx('${t.id}',this)" title="Borrar">✕</button>`:'';
     return `<div class="list-item ${isIncome?'entrada':'gasto'}">
         <div class="list-item-left">
             <span class="badge ${badgeClass(t.negocio)}">${t.negocio}</span>
             <div class="tx-desc">${t.descripcion}</div>
         </div>
         <div class="amt ${isIncome?'plus':'minus'}">${isIncome?'+':'-'}$${t.monto.toLocaleString()}</div>
-        ${del}
+        ${btns}
     </div>`;
 }
 
 // ── SERVICE WORKER ──
 if ('serviceWorker' in navigator) {
-    const sw = `const C='finanzas-v1';self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(['./']))));self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));`;
+    const sw=`const C='finanzas-v2';self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(['./']))));self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));`;
     navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'text/javascript'})));
 }
 
-window.onload = init;
+window.onload=init;
 </script>
 </body>
 </html>
-
