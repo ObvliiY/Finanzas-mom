@@ -71,6 +71,22 @@
         .btn-no { background:#eee; color:#333; }
         .success-msg { background:white; border-radius:12px; padding:16px; text-align:center; color:var(--income); font-weight:500; margin-top:12px; font-size:15px; }
         .empty-msg { text-align:center; color:#aaa; padding:40px 0; font-size:14px; }
+        /* CIERRE DE MES */
+        .cerrar-btn { width:100%; padding:14px; background:#7B3FA0; color:white; border:none; border-radius:12px; font-size:15px; font-weight:bold; cursor:pointer; margin-top:16px; }
+        .resumen-modal { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:300; display:flex; align-items:center; justify-content:center; padding:20px; }
+        .resumen-modal-inner { background:white; border-radius:18px; padding:22px; width:100%; max-width:420px; max-height:88vh; overflow-y:auto; }
+        .resumen-modal-inner h3 { margin:0 0 4px; color:#7B3FA0; font-size:18px; }
+        .resumen-modal-inner p.sub { color:#999; font-size:12px; margin:0 0 16px; }
+        .resumen-row { display:flex; justify-content:space-between; font-size:13px; padding:7px 0; border-bottom:1px solid #f0f0f0; }
+        .resumen-row:last-of-type { border-bottom:none; }
+        .resumen-row .neg { color:#444; font-weight:500; }
+        .resumen-row .nums { display:flex; gap:12px; }
+        .resumen-row .nums span { font-size:12px; }
+        .resumen-total { background:#F0E6F8; border-radius:10px; padding:10px 12px; margin:12px 0; }
+        .resumen-total .lbl { font-size:12px; color:#7B3FA0; font-weight:600; }
+        .resumen-total .val { font-size:22px; font-weight:bold; }
+        .btn-purple { flex:1; padding:13px; border-radius:8px; border:none; background:#7B3FA0; color:white; font-weight:bold; cursor:pointer; font-size:14px; }
+
         /* CONFIG */
         #screen-config { position:fixed; inset:0; background:var(--bg); z-index:200; overflow-y:auto; display:none; padding:24px 20px 40px; }
         #screen-config.visible { display:block; }
@@ -138,6 +154,7 @@
         </div>
         <div class="section-title" style="margin-top:20px;">Últimos movimientos</div>
         <div id="recent-list"><div class="empty-msg">Cargando...</div></div>
+        <button class="cerrar-btn" onclick="iniciarCierreMes()">📦 Cerrar mes y archivar</button>
     </div>
 
     <div id="tab-registrar" class="tab-content">
@@ -183,7 +200,7 @@
 
 <script>
 // ── CONFIG ──
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyYcrsDCrROCcLkS0Qe1iPjipTak9tF4krXuvvlpG0j0nmAe9ZQuOt3EvkibHv9pBFMBw/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyWbn_nvK4_TDXq68S_BlAxDHv4fKWry-p8HNWIoJolynZJRsw1ahOYE09RGa0ODTKUkw/exec";
 let CFG = {};
 function loadConfig() {
     const s = localStorage.getItem('finanzas_cfg');
@@ -376,13 +393,106 @@ async function saveEdit() {
     btn.disabled = true; btn.textContent = 'Guardando...';
     try {
         await updateInSheets(updated);
-        await loadData();
+        // Actualizar solo esa transacción en memoria, sin recargar todo
+        const idx = transactions.findIndex(t => t.id === editingId);
+        if (idx !== -1) transactions[idx] = updated;
         renderResumen();
         renderHistory();
         closeEdit();
     } catch(e) {
         btn.disabled = false; btn.textContent = 'Guardar';
         document.getElementById('edit-status').textContent = 'Error al guardar. Intenta de nuevo.';
+    }
+}
+
+// ── CIERRE DE MES ──
+async function iniciarCierreMes() {
+    const modal = document.createElement('div');
+    modal.className = 'resumen-modal';
+    modal.id = 'mes-modal';
+    modal.innerHTML = '<div class="resumen-modal-inner"><p style="text-align:center;color:#999;padding:20px;">Calculando resumen...</p></div>';
+    document.body.appendChild(modal);
+
+    try {
+        const res  = await fetch(APPS_SCRIPT_URL, {
+            method:'POST', headers:{'Content-Type':'text/plain'},
+            body:JSON.stringify({action:'getResumen', sheetId:CFG.sheetId, sheetName:'Finanzas'})
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+        if (data.vacio) {
+            modal.querySelector('.resumen-modal-inner').innerHTML = `
+                <h3>Sin movimientos</h3>
+                <p style="color:#999;margin:12px 0;">No hay movimientos registrados este mes.</p>
+                <button class="btn btn-no" style="width:100%" onclick="document.getElementById('mes-modal').remove()">Cerrar</button>`;
+            return;
+        }
+        mostrarModalCierre(data.resumen);
+    } catch(e) {
+        modal.querySelector('.resumen-modal-inner').innerHTML = `
+            <p style="color:var(--expense)">Error al obtener resumen: ${e.message}</p>
+            <button class="btn btn-no" style="width:100%;margin-top:10px" onclick="document.getElementById('mes-modal').remove()">Cerrar</button>`;
+    }
+}
+
+function mostrarModalCierre(resumen) {
+    const now    = new Date();
+    const meses  = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const label  = meses[now.getMonth()] + ' ' + now.getFullYear();
+    const total  = resumen.find(r => r.negocio === 'TOTAL') || {};
+    const filas  = resumen.filter(r => r.negocio !== 'TOTAL');
+    const ganColor = (total.ganancia||0) >= 0 ? '#0F6E56' : '#A32D2D';
+
+    const filasHtml = filas.map(r => `
+        <div class="resumen-row">
+            <span class="neg">${r.negocio}</span>
+            <div class="nums">
+                <span style="color:var(--income)">+$${r.entrada.toLocaleString()}</span>
+                <span style="color:var(--expense)">-$${(r.gasto_fijo+r.gasto_variable).toLocaleString()}</span>
+                <span style="color:${r.ganancia>=0?'var(--income)':'var(--expense)'};font-weight:600">=$${r.ganancia.toLocaleString()}</span>
+            </div>
+        </div>`).join('');
+
+    document.querySelector('#mes-modal .resumen-modal-inner').innerHTML = `
+        <h3>📦 Cerrar ${label}</h3>
+        <p class="sub">Resumen del mes antes de archivar</p>
+        <div class="resumen-total">
+            <div class="lbl">GANANCIA DEL MES</div>
+            <div class="val" style="color:${ganColor}">$${(total.ganancia||0).toLocaleString()}</div>
+            <div style="font-size:11px;color:#666;margin-top:4px;">
+                Entradas: $${(total.entrada||0).toLocaleString()} &nbsp;|&nbsp;
+                Gastos: $${((total.gasto_fijo||0)+(total.gasto_variable||0)).toLocaleString()}
+            </div>
+        </div>
+        ${filasHtml}
+        <p style="font-size:12px;color:#999;margin:14px 0 10px;">Al confirmar, los movimientos se archivarán en una hoja llamada <strong>"${label}"</strong> y el historial quedará limpio para el mes nuevo.</p>
+        <div id="cierre-status" style="font-size:13px;color:var(--expense);min-height:18px;margin-bottom:8px;"></div>
+        <div class="btn-row">
+            <button class="btn btn-no" onclick="document.getElementById('mes-modal').remove()">Cancelar</button>
+            <button class="btn-purple" onclick="confirmarCierre('${label}')">Confirmar y archivar</button>
+        </div>`;
+}
+
+async function confirmarCierre(etiqueta) {
+    const btn = document.querySelector('.btn-purple');
+    btn.disabled = true; btn.textContent = 'Archivando...';
+    try {
+        const res  = await fetch(APPS_SCRIPT_URL, {
+            method:'POST', headers:{'Content-Type':'text/plain'},
+            body:JSON.stringify({action:'cerrarMes', sheetId:CFG.sheetId, sheetName:'Finanzas', etiqueta:etiqueta})
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+        // Limpiar estado local
+        transactions = [];
+        document.getElementById('mes-modal').remove();
+        renderResumen();
+        // Mensaje de éxito en el chat
+        switchTab('registrar', document.querySelectorAll('.nav-item')[1]);
+        appendBubble('bot', `✅ ¡Mes cerrado! Los movimientos quedaron archivados en <strong>"${data.archivoNombre}"</strong> en tu Google Sheet. El historial está limpio para empezar el mes nuevo.`);
+    } catch(e) {
+        btn.disabled = false; btn.textContent = 'Confirmar y archivar';
+        document.getElementById('cierre-status').textContent = 'Error: ' + e.message;
     }
 }
 
